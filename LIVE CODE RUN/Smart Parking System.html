@@ -1,0 +1,469 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Smart Parking System</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one working console. Live lot and activity on the left, entry and exit billing on the right, admin report and project notes below. */
+:root {
+  --bg: #f3f6fa;
+  --surface: #ffffff;
+  --surface-2: #e8eff7;
+  --fg: #0f2a47;
+  --muted: #55687f;
+  --line: #d3dce8;
+  --accent: #1f5fa8;
+  --accent-fg: #ffffff;
+  --free: #2f8a2c;
+  --busy: #d2461a;
+  --held: #6a4bc4;
+  --tile-fg: #ffffff;
+  --danger: #b3261e;
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1522; --surface: #12233a; --surface-2: #182d49; --fg: #e6eef8; --muted: #9bb0c7;
+    --line: #263d5a; --accent: #6aa8f0; --accent-fg: #0b1522; --free: #5fb85a; --busy: #f0764a;
+    --held: #a58cf0; --tile-fg: #0b1522; --danger: #ff8a80; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1522; --surface: #12233a; --surface-2: #182d49; --fg: #e6eef8; --muted: #9bb0c7;
+  --line: #263d5a; --accent: #6aa8f0; --accent-fg: #0b1522; --free: #5fb85a; --busy: #f0764a;
+  --held: #a58cf0; --tile-fg: #0b1522; --danger: #ff8a80; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+}
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 7px; background: var(--accent); color: var(--accent-fg);
+  display: grid; place-items: center; font-weight: 700; font-size: 18px;
+}
+.nav { display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: 14px; }
+.nav a { color: var(--muted); text-decoration: none; }
+.nav a:hover { color: var(--fg); text-decoration: underline; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+
+.hero { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: end; }
+.hero h1 { font-size: clamp(2.4rem, 7vw, 4rem); letter-spacing: -0.02em; }
+.hero h1 span { color: var(--accent); }
+.hero p { color: var(--muted); max-width: 52ch; margin-top: 14px; font-size: 16px; }
+.hero .meta { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.stat b { display: block; font-family: var(--font-display); font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.stat.free b { color: var(--free); } .stat.busy b { color: var(--busy); } .stat.held b { color: var(--held); }
+
+.console { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+.card h2 { font-size: 1.15rem; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.hint { font-size: 13px; color: var(--muted); }
+.hint strong { color: var(--fg); }
+
+.gate { display: flex; align-items: center; gap: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+.gate i { flex: 1; height: 2px; background: var(--line); }
+.lot { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.slot {
+  appearance: none; border: 0; border-radius: 8px; padding: 10px 6px; min-height: 84px; color: var(--tile-fg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; font-family: inherit;
+}
+.slot.free { background: var(--free); } .slot.occupied { background: var(--busy); } .slot.reserved { background: var(--held); }
+.slot .n { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; line-height: 1; }
+.slot .st { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .92; }
+.slot .pl { font-family: var(--font-mono); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 14px; }
+.slot.next { outline: 3px dashed var(--accent); outline-offset: 2px; }
+.legend { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.log li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; }
+.log time { font-family: var(--font-mono); font-size: 12px; color: var(--muted); padding-top: 2px; }
+
+form { display: flex; flex-direction: column; gap: 12px; }
+label, .lbl { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+input[type="text"], input[type="number"], select {
+  width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px 12px; min-height: 42px;
+}
+input#plate { font-family: var(--font-mono); text-transform: uppercase; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; min-width: 0; }
+.btn {
+  font: inherit; font-weight: 600; border-radius: 8px; padding: 10px 16px; min-height: 42px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+}
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:hover { filter: brightness(1.06); }
+.msg { font-size: 14px; min-height: 22px; }
+.msg.ok { color: var(--free); } .msg.err { color: var(--danger); }
+.divider { border: 0; border-top: 1px solid var(--line); margin: 0; }
+
+.bill { background: var(--surface-2); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.bill-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.bill-row b { font-variant-numeric: tabular-nums; text-align: right; }
+.bill-total { background: var(--accent); color: var(--accent-fg); border-radius: 8px; padding: 12px; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 1.7rem; font-variant-numeric: tabular-nums; }
+.pay { display: flex; gap: 8px; }
+.pay label { flex: 1; margin: 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px; text-align: center; font-weight: 500; cursor: pointer; background: var(--bg); }
+.pay input { position: absolute; opacity: 0; pointer-events: none; }
+.pay label:has(input:checked) { border-color: var(--accent); background: var(--surface-2); font-weight: 600; }
+.pay label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.receipt { border: 1px dashed var(--line); border-radius: 10px; padding: 14px; font-family: var(--font-mono); font-size: 12.5px; display: flex; flex-direction: column; gap: 4px; }
+.receipt.empty { font-family: var(--font-body); font-size: 14px; color: var(--muted); }
+.receipt .rt { font-weight: 500; letter-spacing: .08em; }
+.receipt .r { display: flex; justify-content: space-between; gap: 12px; }
+
+.admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.admin-stats div { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; }
+.admin-stats b { display: block; font-family: var(--font-display); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.admin-stats span { font-size: 12px; color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; }
+td.mono { font-family: var(--font-mono); font-size: 13px; }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--c); color: var(--tile-fg); }
+
+.about { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.step { background: var(--surface-2); border-radius: 10px; padding: 14px; }
+.step h3 { font-size: 1rem; color: var(--accent); margin-bottom: 4px; }
+.step p { font-size: 13.5px; color: var(--muted); }
+dl { margin: 14px 0 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 18px; font-size: 14px; }
+dt { font-weight: 600; color: var(--accent); }
+dd { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chips span { background: var(--surface-2); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.full { grid-column: 1 / -1; }
+footer { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 880px) {
+  .hero, .console, .about { grid-template-columns: minmax(0, 1fr); }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .slot { min-height: 76px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="brand-mark">P</span> Smart Parking</div>
+    <nav class="nav" aria-label="Sections">
+      <a href="#lot">Live lot</a><a href="#admin">Admin report</a><a href="#system">How it works</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Find. Park. <span>Pay.</span></h1>
+      <p>Smart parking slot allocation and billing. The lot below is live: park a vehicle and watch the nearest free slot fill, then exit to see the bill rounded up to the hour.</p>
+      <p class="meta">SIMATS Engineering &middot; CSA0212 C Programming &middot; Rate Rs. 20 per hour</p>
+    </div>
+    <div class="stats" aria-label="Lot summary">
+      <div class="stat free"><b id="sFree">0</b><span>Free</span></div>
+      <div class="stat busy"><b id="sBusy">0</b><span>Occupied</span></div>
+      <div class="stat held"><b id="sHeld">0</b><span>Reserved</span></div>
+    </div>
+  </section>
+
+  <main class="console" id="lot">
+    <div class="col">
+      <section class="card" aria-labelledby="lotTitle">
+        <div class="card-head">
+          <h2 id="lotTitle">Live parking lot</h2>
+          <p class="hint">Next allocation: <strong id="nextSlot">-</strong></p>
+        </div>
+        <div class="gate"><span>Entry gate</span><i></i></div>
+        <div class="lot" id="lotGrid"></div>
+        <div class="legend">
+          <span style="--c: var(--free)">Free</span><span style="--c: var(--busy)">Occupied</span><span style="--c: var(--held)">Reserved</span>
+        </div>
+        <p class="hint" style="margin-top:10px">Six vehicles are sample data so the lot starts in use. Select an occupied slot to bill it.</p>
+      </section>
+
+      <section class="card" aria-labelledby="logTitle">
+        <div class="card-head"><h2 id="logTitle">Activity</h2></div>
+        <ul class="log" id="log"></ul>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="card" aria-labelledby="entryTitle">
+        <div class="card-head"><h2 id="entryTitle">Vehicle entry</h2><p class="hint">Nearest free slot to the gate</p></div>
+        <form id="entryForm" autocomplete="off">
+          <div>
+            <label for="plate">Vehicle number</label>
+            <input type="text" id="plate" maxlength="14" placeholder="TN01 AB 1234" required>
+          </div>
+          <div class="row">
+            <button class="btn" type="submit" id="parkBtn">Park now</button>
+            <button class="btn ghost" type="button" id="reserveBtn">Reserve a slot</button>
+          </div>
+          <p class="msg" id="entryMsg" role="status"></p>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="exitTitle">
+        <div class="card-head"><h2 id="exitTitle">Exit, bill and pay</h2><p class="hint">Fee = hours &times; Rs. 20</p></div>
+        <form id="exitForm" autocomplete="off">
+          <div class="row">
+            <div>
+              <label for="exitPlate">Vehicle</label>
+              <select id="exitPlate"></select>
+            </div>
+            <div>
+              <label for="exitMin">Parked minutes (demo)</label>
+              <input type="number" id="exitMin" min="1" max="2880" placeholder="Use the clock">
+            </div>
+          </div>
+          <div class="bill" aria-live="polite">
+            <div class="bill-row"><span>Hourly rate</span><b>Rs. 20</b></div>
+            <div class="bill-row"><span>Parked for</span><b id="bParked">-</b></div>
+            <div class="bill-row"><span>Billable</span><b id="bBillable">-</b></div>
+            <div class="bill-total" id="bTotal">Total Rs. 0</div>
+          </div>
+          <div>
+            <span class="lbl">Pay with</span>
+            <div class="pay">
+              <label><input type="radio" name="pay" value="UPI" checked> UPI</label>
+              <label><input type="radio" name="pay" value="Card"> Card</label>
+            </div>
+          </div>
+          <button class="btn" type="submit" id="payBtn">Pay and exit</button>
+          <p class="msg" id="exitMsg" role="status"></p>
+        </form>
+        <hr class="divider" style="margin:14px 0">
+        <div id="receipt" class="receipt empty">The e-receipt appears here after payment.</div>
+      </section>
+    </div>
+  </main>
+
+  <section class="card" id="admin" aria-labelledby="adminTitle">
+    <div class="card-head"><h2 id="adminTitle">Admin report</h2><p class="hint">Updates as vehicles enter and leave</p></div>
+    <div class="admin-stats">
+      <div><b id="aTotal">12</b><span>Total slots</span></div>
+      <div><b id="aHandled">0</b><span>Vehicles handled</span></div>
+      <div><b id="aRevenue">Rs. 0</b><span>Revenue collected</span></div>
+      <div><b id="aOcc">0%</b><span>Occupancy</span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Slot</th><th>Vehicle</th><th>Status</th><th>Parked</th><th>Bill so far</th></tr></thead>
+        <tbody id="adminRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="system" aria-labelledby="sysTitle">
+    <h2 id="sysTitle">How the system works</h2>
+    <div class="steps">
+      <div class="step"><h3>Detect</h3><p>IR or ultrasonic sensors report slot status.</p></div>
+      <div class="step"><h3>Allocate</h3><p>The nearest free slot is assigned.</p></div>
+      <div class="step"><h3>Park</h3><p>The vehicle enters and the timer starts.</p></div>
+      <div class="step"><h3>Bill and pay</h3><p>The fee is computed and paid digitally.</p></div>
+    </div>
+    <div class="about" style="margin-top:22px">
+      <div>
+        <h3>Implementation</h3>
+        <dl>
+          <dt>Hardware</dt><dd>ESP32, IR / ultrasonic sensors</dd>
+          <dt>Backend</dt><dd>C programming</dd>
+          <dt>Database</dt><dd>MySQL or Firebase</dd>
+          <dt>Front end</dt><dd>Android / React web app</dd>
+          <dt>Payment</dt><dd>UPI gateway (test mode)</dd>
+        </dl>
+      </div>
+      <div>
+        <h3>Future scope</h3>
+        <div class="chips"><span>ANPR entry</span><span>Occupancy prediction</span><span>EV charging slots</span><span>Dynamic pricing</span><span>City-wide network</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Presented by R. Badrinarayanan, Jaseswy. A and Amit Vishagan. D</span>
+    <span>Guided by Uma Maheswara Rao &middot; Saveetha Institute of Medical and Technical Sciences</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var ROWS = 3, COLS = 4, RATE = 20, MIN = 60000;
+  var slots = [];
+  for (var i = 0; i < ROWS * COLS; i++) slots.push({ id: i + 1, status: 'free', plate: '', entry: 0 });
+  var handled = 0, revenue = 0, receiptNo = 0, log = [], selectCache = '';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function seed(id, plate, mins) {
+    var s = slots[id - 1]; s.status = 'occupied'; s.plate = plate; s.entry = Date.now() - mins * MIN; handled++;
+  }
+  seed(2, 'TN09 AB 1234', 95); seed(3, 'TN22 CD 5678', 20); seed(6, 'TN10 EF 4321', 140);
+  seed(7, 'TN07 GH 8765', 45); seed(9, 'TN38 JK 2468', 200); seed(12, 'TN01 LM 1357', 10);
+  addLog('Lot opened with 6 sample vehicles.');
+
+  function clock() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function addLog(t) { log.unshift({ t: clock(), m: t }); if (log.length > 8) log.pop(); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function clean(v) { return v.toUpperCase().replace(/[^A-Z0-9 -]/g, '').replace(/\s+/g, ' ').trim(); }
+  function fmt(m) { return Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
+  function fee(m) { var h = Math.ceil(m / 60); if (h < 1) h = 1; return { hours: h, total: h * RATE }; }
+  function elapsed(s) { return Math.max(0, Math.floor((Date.now() - s.entry) / MIN)); }
+  function dist(idx) { return Math.floor(idx / COLS) + (idx % COLS); }
+  function nearest() {
+    var best = -1, bd = 1e9;
+    for (var i = 0; i < slots.length; i++) if (slots[i].status === 'free' && dist(i) < bd) { bd = dist(i); best = i; }
+    return best;
+  }
+  function find(plate, status) {
+    for (var i = 0; i < slots.length; i++) if (slots[i].status === status && slots[i].plate === plate) return i;
+    return -1;
+  }
+  function count(st) { return slots.filter(function (s) { return s.status === st; }).length; }
+  var LABEL = { free: 'Free', occupied: 'Occupied', reserved: 'Reserved' };
+
+  function render() {
+    var nx = nearest();
+    $('lotGrid').innerHTML = slots.map(function (s, i) {
+      return '<button type="button" class="slot ' + s.status + (i === nx ? ' next' : '') + '" data-id="' + s.id +
+        '" aria-label="Slot ' + s.id + ', ' + LABEL[s.status] + (s.plate ? ', ' + esc(s.plate) : '') + '">' +
+        '<span class="n">' + s.id + '</span><span class="st">' + LABEL[s.status] + '</span><span class="pl">' + esc(s.plate) + '</span></button>';
+    }).join('');
+    $('nextSlot').textContent = nx === -1 ? 'Lot full' : 'Slot ' + slots[nx].id;
+    var f = count('free'), o = count('occupied'), r = count('reserved');
+    $('sFree').textContent = f; $('sBusy').textContent = o; $('sHeld').textContent = r;
+    $('aHandled').textContent = handled; $('aRevenue').textContent = 'Rs. ' + revenue;
+    $('aOcc').textContent = Math.round(((o + r) / slots.length) * 100) + '%';
+    $('log').innerHTML = log.map(function (l) { return '<li><time>' + l.t + '</time><span>' + esc(l.m) + '</span></li>'; }).join('');
+
+    var rows = slots.filter(function (s) { return s.status !== 'free'; }).map(function (s) {
+      var occ = s.status === 'occupied', m = occ ? elapsed(s) : 0;
+      return '<tr><td class="num">' + s.id + '</td><td class="mono">' + esc(s.plate) + '</td><td><span class="pill" style="--c: var(--' +
+        (occ ? 'busy' : 'held') + ')">' + LABEL[s.status] + '</span></td><td class="num">' + (occ ? fmt(m) : '-') +
+        '</td><td class="num">' + (occ ? 'Rs. ' + fee(m).total : '-') + '</td></tr>';
+    }).join('');
+    $('adminRows').innerHTML = rows || '<tr><td colspan="5">No vehicles in the lot.</td></tr>';
+
+    var sel = $('exitPlate'), occList = slots.filter(function (s) { return s.status === 'occupied'; });
+    var key = occList.map(function (s) { return s.plate + s.id; }).join('|');
+    if (key !== selectCache) {
+      var cur = sel.value;
+      sel.innerHTML = occList.length ? occList.map(function (s) {
+        return '<option value="' + esc(s.plate) + '">' + esc(s.plate) + ' (slot ' + s.id + ')</option>';
+      }).join('') : '<option value="">No parked vehicles</option>';
+      if (cur && find(cur, 'occupied') !== -1) sel.value = cur;
+      selectCache = key;
+    }
+    $('payBtn').disabled = !occList.length;
+    updateBill();
+  }
+
+  function billMinutes() {
+    var idx = find($('exitPlate').value, 'occupied');
+    if (idx === -1) return null;
+    var manual = parseInt($('exitMin').value, 10);
+    return manual > 0 ? manual : elapsed(slots[idx]);
+  }
+  function updateBill() {
+    var m = billMinutes();
+    if (m === null) { $('bParked').textContent = '-'; $('bBillable').textContent = '-'; $('bTotal').textContent = 'Total Rs. 0'; return; }
+    var b = fee(m);
+    $('bParked').textContent = fmt(m);
+    $('bBillable').textContent = b.hours + ' h (rounded up)';
+    $('bTotal').textContent = 'Total Rs. ' + b.total;
+  }
+  function say(id, text, ok) { var e = $(id); e.textContent = text; e.className = 'msg ' + (ok ? 'ok' : 'err'); }
+
+  $('entryForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = clean($('plate').value);
+    if (!p) return say('entryMsg', 'Enter a vehicle number.', false);
+    if (find(p, 'occupied') !== -1) return say('entryMsg', p + ' is already parked.', false);
+    var idx = find(p, 'reserved');
+    if (idx === -1) idx = nearest();
+    if (idx === -1) return say('entryMsg', 'The lot is full. Try again later.', false);
+    var s = slots[idx]; s.status = 'occupied'; s.plate = p; s.entry = Date.now(); handled++;
+    addLog(p + ' parked in slot ' + s.id + '. Timer started.');
+    say('entryMsg', 'Slot ' + s.id + ' allocated to ' + p + '. Timer started.', true);
+    $('plate').value = ''; selectCache = ''; render();
+    $('exitPlate').value = p; updateBill();
+  });
+  $('reserveBtn').addEventListener('click', function () {
+    var p = clean($('plate').value);
+    if (!p) return say('entryMsg', 'Enter a vehicle number to reserve for.', false);
+    if (find(p, 'occupied') !== -1 || find(p, 'reserved') !== -1) return say('entryMsg', p + ' already has a slot.', false);
+    var idx = nearest();
+    if (idx === -1) return say('entryMsg', 'The lot is full. Cannot reserve.', false);
+    var s = slots[idx]; s.status = 'reserved'; s.plate = p;
+    addLog('Slot ' + s.id + ' reserved for ' + p + '.');
+    say('entryMsg', 'Slot ' + s.id + ' reserved for ' + p + '. Enter the same number to park.', true);
+    $('plate').value = ''; render();
+  });
+
+  $('exitPlate').addEventListener('change', updateBill);
+  $('exitMin').addEventListener('input', updateBill);
+  $('exitForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = $('exitPlate').value, idx = find(p, 'occupied'), m = billMinutes();
+    if (idx === -1 || m === null) return say('exitMsg', 'Choose a parked vehicle.', false);
+    var b = fee(m), s = slots[idx], method = document.querySelector('input[name="pay"]:checked').value;
+    receiptNo++; revenue += b.total;
+    $('receipt').className = 'receipt';
+    $('receipt').innerHTML = '<div class="rt">E-RECEIPT R-' + ('000' + receiptNo).slice(-4) + '</div>' +
+      '<div class="r"><span>Vehicle</span><span>' + esc(p) + '</span></div>' +
+      '<div class="r"><span>Slot</span><span>' + s.id + '</span></div>' +
+      '<div class="r"><span>Parked for</span><span>' + fmt(m) + '</span></div>' +
+      '<div class="r"><span>Billable</span><span>' + b.hours + ' h (rounded up)</span></div>' +
+      '<div class="r"><span>Rate</span><span>Rs. ' + RATE + ' / hour</span></div>' +
+      '<div class="r"><span>Paid via</span><span>' + method + '</span></div>' +
+      '<div class="r"><b>TOTAL</b><b>Rs. ' + b.total + '</b></div>' +
+      '<div class="r"><span>Status</span><span>PAID</span></div>';
+    addLog(p + ' paid Rs. ' + b.total + ' by ' + method + '. Slot ' + s.id + ' is free.');
+    s.status = 'free'; s.plate = ''; s.entry = 0;
+    $('exitMin').value = '';
+    say('exitMsg', 'Payment received. Slot ' + s.id + ' is now free.', true);
+    selectCache = ''; render();
+  });
+
+  $('lotGrid').addEventListener('click', function (e) {
+    var b = e.target.closest('.slot'); if (!b) return;
+    var s = slots[parseInt(b.getAttribute('data-id'), 10) - 1];
+    if (s.status === 'occupied') {
+      $('exitPlate').value = s.plate; $('exitMin').value = ''; updateBill();
+      say('exitMsg', 'Slot ' + s.id + ' selected for billing.', true);
+      $('exitForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else if (s.status === 'reserved') {
+      say('entryMsg', 'Slot ' + s.id + ' is held for ' + s.plate + '.', true);
+    } else {
+      say('entryMsg', 'Slot ' + s.id + ' is free.', true);
+    }
+  });
+
+  render();
+  setInterval(render, 30000);
+})();
+</script>
+
+</body></html>
